@@ -27,8 +27,9 @@ class MultiExcelProcessController(
     fun processMulti(
         @RequestPart("files") files: List<MultipartFile>,
         @RequestPart("prompt") prompt: String,
-        @RequestPart("meta") metaJson: String
-    ): ResponseEntity<MultiExcelProcessingService.MultiProcessResult> {
+        @RequestPart("meta") metaJson: String,
+        @RequestParam(name = "mode", required = false, defaultValue = "detail") mode: String
+    ): ResponseEntity<Any> {
         val mapper = jacksonObjectMapper()
         val meta = mapper.readValue(metaJson, MultiMeta::class.java)
         val result = service.processMultiple(
@@ -39,6 +40,36 @@ class MultiExcelProcessController(
             maxRowsPerSheet = meta.maxRowsPerSheet,
             maxColsPerRow = meta.maxColsPerRow
         )
+        if (mode.equals("json", ignoreCase = true)) {
+            val json = extractJsonObjectOrArray(result.results.firstOrNull()?.outputText ?: "")
+            return ResponseEntity.ok(json ?: mapOf("result" to (result.results.firstOrNull()?.outputText ?: "")))
+        }
         return ResponseEntity.ok(result)
+    }
+
+    private fun extractJsonObjectOrArray(text: String): Any? {
+        val mapper = jacksonObjectMapper()
+        // Prefer fenced ```json blocks
+        val fenceRegex = Regex("```json\\s*(.*?)```", RegexOption.DOT_MATCHES_ALL)
+        val fence = fenceRegex.find(text)
+        if (fence != null) {
+            val snippet = fence.groupValues[1].trim()
+            try { return mapper.readValue(snippet, Any::class.java) } catch (_: Exception) {}
+        }
+        // Try object {...}
+        val objStart = text.indexOf('{')
+        val objEnd = text.lastIndexOf('}')
+        if (objStart >= 0 && objEnd > objStart) {
+            val candidate = text.substring(objStart, objEnd + 1)
+            try { return mapper.readValue(candidate, Any::class.java) } catch (_: Exception) {}
+        }
+        // Try array [...]
+        val arrStart = text.indexOf('[')
+        val arrEnd = text.lastIndexOf(']')
+        if (arrStart >= 0 && arrEnd > arrStart) {
+            val candidate = text.substring(arrStart, arrEnd + 1)
+            try { return mapper.readValue(candidate, Any::class.java) } catch (_: Exception) {}
+        }
+        return null
     }
 }

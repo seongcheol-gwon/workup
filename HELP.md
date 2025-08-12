@@ -159,11 +159,36 @@ curl -X POST "http://localhost:8080/api/bedrock/prompt/customize" \
 
 API Key가 설정되지 않은 경우, 서버는 안전한 로컬 폴백 로직을 사용해 간단히 최적화된 프롬프트 형태를 반환합니다.
 
-## 다중 엑셀 처리 API 사용 시 Bedrock 사용 여부 확인
+## 다중 엑셀 처리 API 사용 시 Bedrock 사용 여부 확인 및 출력 모드 선택
 - Endpoint: POST /api/excel/process-multi (multipart/form-data)
-- Response JSON includes:
+- Query/Form parameter: mode (optional)
+  - mode=detail (기본값): 상세 결과를 반환합니다. 모델 ID, usedBedrock, rows 등의 컨텍스트와 함께 outputText를 포함한 전체 객체를 리턴합니다.
+  - mode=json: 모델 outputText 내부에서 JSON 객체/배열을 추출하여 그 JSON만 응답 본문으로 리턴합니다. 
+    - 우선적으로 ```json ... ``` 펜스 블록을 찾고, 없으면 첫 번째 {...} 또는 [...] 블록을 시도합니다.
+    - 파싱에 실패하면 {"result": "<원본 텍스트>"} 형태로 반환합니다.
+- Response JSON includes (mode=detail):
   - modelId: 사용 모델 ID (예: anthropic.claude-3-5-sonnet-20240620-v1:0)
   - usedBedrock: true면 Bedrock 호출 성공, false면 로컬 폴백 사용됨
   - usedApiKey: (하위 호환 필드) usedBedrock와 동일 의미
 
 Bedrock 호출이 실패(권한/리전/모델 미승인 등)하면 usedBedrock=false가 되고, 서버는 프롬프트와 일부 컨텍스트를 이용한 안전한 폴백 텍스트를 반환합니다.
+
+예시(curl):
+
+- 상세 모드(default)
+```
+curl -X POST "http://localhost:8080/api/excel/process-multi?mode=detail" \
+  -H "Authorization: Basic YWRtaW46YWRtaW4xMjMh" \
+  -H "Content-Type: multipart/form-data" \
+  -F "files=@/path/a.xlsx" \
+  -F "prompt=상품명으로 카드번호를 찾아서 결과를 JSON으로 반환"
+```
+
+- JSON 전용 모드
+```
+curl -X POST "http://localhost:8080/api/excel/process-multi?mode=json" \
+  -H "Authorization: Basic YWRtaW46YWRtaW4xMjMh" \
+  -H "Content-Type: multipart/form-data" \
+  -F "files=@/path/a.xlsx" \
+  -F "prompt=상품명으로 카드번호를 찾아서 결과를 JSON으로 반환"
+```
