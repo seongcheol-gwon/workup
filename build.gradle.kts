@@ -36,6 +36,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    // Excel processing (Apache POI) with password-protected workbook support
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
     // AWS SDK v2 for Bedrock Runtime (SigV4 signing)
     implementation("software.amazon.awssdk:bedrockruntime:2.25.60")
     runtimeOnly("com.h2database:h2")

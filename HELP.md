@@ -158,3 +158,12 @@ curl -X POST "http://localhost:8080/api/bedrock/prompt/customize" \
 ```
 
 API Key가 설정되지 않은 경우, 서버는 안전한 로컬 폴백 로직을 사용해 간단히 최적화된 프롬프트 형태를 반환합니다.
+
+## 다중 엑셀 처리 API 사용 시 Bedrock 사용 여부 확인
+- Endpoint: POST /api/excel/process-multi (multipart/form-data)
+- Response JSON includes:
+  - modelId: 사용 모델 ID (예: anthropic.claude-3-5-sonnet-20240620-v1:0)
+  - usedBedrock: true면 Bedrock 호출 성공, false면 로컬 폴백 사용됨
+  - usedApiKey: (하위 호환 필드) usedBedrock와 동일 의미
+
+Bedrock 호출이 실패(권한/리전/모델 미승인 등)하면 usedBedrock=false가 되고, 서버는 프롬프트와 일부 컨텍스트를 이용한 안전한 폴백 텍스트를 반환합니다.
