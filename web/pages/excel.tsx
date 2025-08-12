@@ -3,8 +3,7 @@ import Layout from '../src/components/Layout'
 import { gql, useMutation } from '@apollo/client'
 import * as XLSX from 'xlsx'
 import { Alert, Button, Card, Input, Radio, Select, Space, Table, Tag, Typography, Upload, Spin } from 'antd'
-import type { UploadFile } from 'antd/es/upload/interface'
-import { InboxOutlined, DeleteOutlined, PlayCircleOutlined } from '@ant-design/icons'
+import { InboxOutlined, DeleteOutlined, PlayCircleOutlined, CloseOutlined, MinusCircleOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 
 const PROCESS_EXCEL = gql`
   mutation ProcessExcel($files: [Upload!]!, $prompt: String!, $meta: JSON, $mode: String) {
@@ -18,6 +17,12 @@ const LIST_SHEETS = gql`
   }
 `
 
+const LIST_SHEET_INFO = gql`
+  mutation ListSheetInfo($file: Upload!, $password: String) {
+    listSheetInfo(file: $file, password: $password)
+  }
+`
+
 type FileItem = {
   file: File
   password?: string
@@ -25,6 +30,7 @@ type FileItem = {
   selectedSheets?: string[]
   needsPassword?: boolean
   passwordVerified?: boolean
+  columnsBySheet?: Record<string, string[]>
 }
 
 export default function ExcelPage() {
@@ -39,55 +45,68 @@ export default function ExcelPage() {
     },
   })
   const [fetchSheets] = useMutation(LIST_SHEETS)
+  const [fetchSheetInfo] = useMutation(LIST_SHEET_INFO)
 
   const parseSheetsInfo = async (
-    file: File
-  ): Promise<{ sheets: string[]; needsPassword: boolean }> => {
+    file: File,
+    password?: string
+  ): Promise<{ sheets: string[]; needsPassword: boolean; columnsBySheet?: Record<string, string[]> }> => {
     try {
       const buf = await file.arrayBuffer()
-      const wb = XLSX.read(buf, { type: 'array' })
-      return { sheets: wb.SheetNames || [], needsPassword: false }
+      const wb = XLSX.read(buf, { type: 'array', password })
+      const sheets = wb.SheetNames || []
+      const columnsBySheet: Record<string, string[]> = {}
+      for (const sn of sheets) {
+        const ws = wb.Sheets[sn]
+        if (!ws) continue
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any
+        const header = (rows?.[0] || []).map((v) => (v == null ? '' : String(v))).filter((v) => v && v.trim().length > 0)
+        columnsBySheet[sn] = header
+      }
+      return { sheets, needsPassword: false, columnsBySheet }
     } catch (e) {
-      // If parsing fails in browser, assume it may be password-protected
+      // If parsing fails in browser, assume it may be password-protected or requires password
       return { sheets: [], needsPassword: true }
     }
   }
 
   const addFiles = async (files: File[]) => {
     if (!files.length) return
-    setItems((prev) => {
-      const existingNames = new Set(prev.map((p) => p.file.name))
-      const dedup = files.filter((f) => !existingNames.has(f.name))
-      return [
+    // Determine new files by name against current state to avoid touching existing entries
+    const existingNames = new Set(items.map((p) => p.file.name))
+    const dedup = files.filter((f) => !existingNames.has(f.name))
+
+    // Append only the new files
+    if (dedup.length > 0) {
+      setItems((prev) => [
         ...prev,
         ...dedup.map((f) => ({ file: f, availableSheets: undefined, selectedSheets: [] as string[], needsPassword: false, passwordVerified: false })),
-      ]
-    })
-    for (const f of files) {
-      const info = await parseSheetsInfo(f)
-      setItems((prev) =>
-        prev.map((it) =>
-          it.file.name === f.name
-            ? {
-                ...it,
-                availableSheets: info.sheets,
-                needsPassword: info.needsPassword,
-                passwordVerified: !info.needsPassword,
-                selectedSheets: info.sheets.length > 0 ? [...info.sheets] : [],
-              }
-            : it
+      ])
+
+      // Parse and update only the new files
+      for (const f of dedup) {
+        const info = await parseSheetsInfo(f)
+        setItems((prev) =>
+          prev.map((it) => {
+            if (it.file.name !== f.name) return it
+            const prevSelected = it.selectedSheets || []
+            const nextSelected = prevSelected.length > 0
+              ? prevSelected.filter((s) => info.sheets.includes(s))
+              : (info.sheets.length > 0 ? [...info.sheets] : [])
+            return {
+              ...it,
+              availableSheets: info.sheets,
+              needsPassword: info.needsPassword,
+              passwordVerified: !info.needsPassword,
+              selectedSheets: nextSelected,
+              columnsBySheet: info.columnsBySheet || {},
+            }
+          })
         )
-      )
+      }
     }
   }
 
-  const onUploadChange = async (info: { fileList: UploadFile[] }) => {
-    const files: File[] = info.fileList
-      .map((f) => f.originFileObj)
-      .filter((f): f is any => !!f)
-      .map((f) => f as File)
-    await addFiles(files)
-  }
 
   const onDelete = (name: string) => {
     setItems((prev) => prev.filter((p) => p.file.name !== name))
@@ -97,27 +116,58 @@ export default function ExcelPage() {
     // Set password immediately
     setItems((prev) => prev.map((p) => (p.file.name === name ? { ...p, password: pwd } : p)))
 
-    // If this file was password-protected and now we have a password, try to fetch sheets from backend
+    // Always try to parse with provided password (regardless of current needsPassword flag)
     const target = items.find((p) => p.file.name === name)
-    if (target && target.needsPassword) {
-      if (pwd && pwd.length > 0) {
-        try {
-          const { data } = await fetchSheets({ variables: { file: target.file, password: pwd } })
-          const sheets: string[] = data?.listSheets || []
+    if (!target) return
+
+    if (pwd && pwd.length > 0) {
+      try {
+        const info = await parseSheetsInfo(target.file, pwd)
+        if (info && info.sheets.length > 0) {
           setItems((prev) =>
-            prev.map((p) =>
-              p.file.name === name
-                ? { ...p, availableSheets: sheets, selectedSheets: sheets.length > 0 ? [...sheets] : [], passwordVerified: true }
-                : p
-            )
+            prev.map((p) => {
+              if (p.file.name !== name) return p
+              const prevSelected = p.selectedSheets || []
+              const nextSelected = prevSelected.length > 0
+                ? prevSelected.filter((s) => info.sheets.includes(s))
+                : (info.sheets.length > 0 ? [...info.sheets] : [])
+              return {
+                ...p,
+                availableSheets: info.sheets,
+                selectedSheets: nextSelected,
+                needsPassword: false,
+                passwordVerified: true,
+                columnsBySheet: info.columnsBySheet || {},
+              }
+            })
           )
-        } catch (err) {
-          // leave availableSheets as-is; UI will still allow run with meta passwords
+          return
         }
-      } else {
-        // If password cleared, lock the sheet selection
-        setItems((prev) => prev.map((p) => (p.file.name === name ? { ...p, selectedSheets: [], passwordVerified: false } : p)))
+      } catch (err) {
+        // fall through to backend approach
       }
+      // Backend fallback: fetch sheets and columns via server
+      try {
+        const { data } = await fetchSheetInfo({ variables: { file: target.file, password: pwd } })
+        const info = data?.listSheetInfo as { sheets?: string[]; columnsBySheet?: Record<string, string[]> }
+        const sheets: string[] = Array.isArray(info?.sheets) ? (info!.sheets as string[]) : []
+        const columnsBySheet: Record<string, string[]> = (info?.columnsBySheet as any) || {}
+        setItems((prev) =>
+          prev.map((p) => {
+            if (p.file.name !== name) return p
+            const prevSelected = p.selectedSheets || []
+            const nextSelected = prevSelected.length > 0
+              ? prevSelected.filter((s) => sheets.includes(s))
+              : (sheets.length > 0 ? [...sheets] : [])
+            return { ...p, availableSheets: sheets, selectedSheets: nextSelected, needsPassword: false, passwordVerified: true, columnsBySheet }
+          })
+        )
+      } catch (err) {
+        // leave availableSheets as-is; UI will still allow run with meta passwords
+      }
+    } else {
+      // If password cleared, lock the sheet selection
+      setItems((prev) => prev.map((p) => (p.file.name === name ? { ...p, selectedSheets: [], passwordVerified: false } : p)))
     }
   }
 
@@ -135,6 +185,32 @@ export default function ExcelPage() {
 
   const canRun = useMemo(() => items.length > 0 && prompt.trim().length > 0, [items, prompt])
 
+  const insertIntoPrompt = (value: string) => {
+    if (!value) return
+    // Insert raw token (e.g., {Sheet} or {Sheet:Column}) without quotes
+    const safe = String(value)
+    try {
+      const textarea = document.getElementById('excel-prompt-input') as HTMLTextAreaElement | null
+      if (textarea && typeof textarea.selectionStart === 'number') {
+        const start = textarea.selectionStart
+        const end = textarea.selectionEnd || start
+        const before = prompt.substring(0, start)
+        const after = prompt.substring(end)
+        const sepBefore = before && !before.endsWith(' ') ? ' ' : ''
+        const sepAfter = after && !after.startsWith(' ') ? ' ' : ''
+        const newVal = `${before}${sepBefore}${safe}${sepAfter}${after}`
+        setPrompt(newVal)
+        setTimeout(() => {
+          const pos = (before + sepBefore + safe).length
+          textarea.selectionStart = textarea.selectionEnd = pos
+          textarea.focus()
+        }, 0)
+        return
+      }
+    } catch {}
+    setPrompt((p) => (p ? `${p} ${safe}` : safe))
+  }
+
   const handleRun = async () => {
       // Clear previous result and show loading state message
       setResult(null)
@@ -146,17 +222,79 @@ export default function ExcelPage() {
       if (selected.length > 0) sheetNames[it.file.name] = selected
     })
 
+    // Build map of columns per sheet across all selected items
+    const columnsMap: Record<string, Set<string>> = {}
+    for (const it of items) {
+      const selected = (it.selectedSheets || []).filter((s) => s && s.length > 0)
+      for (const sn of selected) {
+        const cols = it.columnsBySheet?.[sn] || []
+        if (!columnsMap[sn]) columnsMap[sn] = new Set<string>()
+        cols.forEach((c) => columnsMap[sn].add(String(c)))
+      }
+    }
+
+    // Dynamically compute maximum rows per sheet and maximum columns per row across selected sheets
+    let computedMaxRows = 0
+    let computedMaxCols = 0
+    for (const it of items) {
+      const selected = (it.selectedSheets || []).filter((s) => s && s.length > 0)
+      if (selected.length === 0) continue
+      try {
+        const buf = await it.file.arrayBuffer()
+        let wb: XLSX.WorkBook | null = null
+        try {
+          wb = XLSX.read(buf, { type: 'array', password: it.password })
+        } catch {
+          wb = null
+        }
+        if (!wb) continue
+        for (const sn of selected) {
+          const ws = wb.Sheets[sn]
+          if (!ws) continue
+          const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any
+          if (rows.length > computedMaxRows) computedMaxRows = rows.length
+          for (const row of rows) {
+            if (Array.isArray(row) && row.length > computedMaxCols) {
+              computedMaxCols = row.length
+            }
+          }
+        }
+      } catch {
+        // Ignore files we cannot read; fall back to defaults if nothing computed
+      }
+    }
+
+    // Expand variables in prompt according to requirements:
+    // - {시트이름:열이름} -> '열이름'
+    // - {시트이름} -> '시트이름'
+    // Perform replacements unconditionally and quote values with single quotes.
+    let promptToSend = prompt
+
+    const quote = (s: string) => `'${String(s).replace(/'/g, "\\'")}'`
+
+    // Replace {sheet:column} tokens first
+    promptToSend = promptToSend.replace(/\{([^:{}]+):([^{}]+)\}/g, (_match, _p1, _p2) => {
+      const col = String(_p2)
+      return quote(col)
+    })
+
+    // Then replace {sheet} tokens
+    promptToSend = promptToSend.replace(/\{([^:{}]+)\}/g, (_match, _p1) => {
+      const sheet = String(_p1)
+      return quote(sheet)
+    })
+
     const meta = {
       passwords,
       sheetNames,
-      maxRowsPerSheet: 200,
-      maxColsPerRow: 30,
+      maxRowsPerSheet: computedMaxRows > 0 ? computedMaxRows : 200,
+      maxColsPerRow: computedMaxCols > 0 ? computedMaxCols : 30,
     }
 
     await run({
       variables: {
         files: items.map((it) => it.file),
-        prompt,
+        prompt: promptToSend,
         meta,
         mode,
       },
@@ -166,21 +304,24 @@ export default function ExcelPage() {
   return (
     <Layout>
       <Space direction="vertical" style={{ width: '100%' }} size={16}>
-        <Typography.Title level={2} style={{ marginTop: 0 }}>엑셀 정보 가져오기</Typography.Title>
+        <Typography.Title level={2} style={{ marginTop: 0 }}>Sheet Sense</Typography.Title>
 
-        <Card title="엑셀 파일 업로드" size="small">
+        <Card title="스프레드시트 파일 업로드" size="small">
           <Upload.Dragger
             multiple
             accept=".xls,.xlsx"
-            beforeUpload={() => false}
-            onChange={onUploadChange}
+            beforeUpload={async (file) => {
+              // Prevent Upload from keeping an internal fileList and manage it ourselves
+              await addFiles([file as File])
+              return Upload.LIST_IGNORE
+            }}
             showUploadList={false}
           >
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
             <p className="ant-upload-text">파일을 이 영역으로 드래그하거나 클릭하여 업로드</p>
-            <p className="ant-upload-hint">엑셀(.xls, .xlsx) 파일을 여러 개 선택할 수 있습니다.</p>
+            <p className="ant-upload-hint">스프레드시트(.xls, .xlsx) 파일을 여러 개 선택할 수 있습니다.</p>
           </Upload.Dragger>
 
           {items.length > 0 && (
@@ -192,50 +333,105 @@ export default function ExcelPage() {
                 dataSource={items}
                 columns={[
                   {
-                    title: '파일명',
-                    dataIndex: ['file', 'name'],
-                    key: 'name',
+                    title: '파일',
+                    key: 'name_password',
+                    width: 420,
+                    onCell: () => ({ style: { minWidth: 280, maxWidth: 480 } }),
                     render: (_: any, rec: any) => (
-                      <Space direction="vertical" size={0}>
-                        <Typography.Text strong>{rec.file.name}</Typography.Text>
-                        {rec.needsPassword ? <Tag color="gold">보호됨</Tag> : <Tag color="green">공개</Tag>}
-                      </Space>
+                      <div style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          {rec.needsPassword ? (
+                            <LockOutlined style={{ color: '#faad14' }} title="보호됨" />
+                          ) : (
+                            <UnlockOutlined style={{ color: '#52c41a' }} title="공개" />
+                          )}
+                          <Typography.Text strong ellipsis={{ tooltip: rec.file.name }} style={{ flex: 1, minWidth: 0 }}>{rec.file.name}</Typography.Text>
+                        </div>
+                        <Input.Password
+                          value={rec.password || ''}
+                          onChange={(e) => setPwd(rec.file.name, e.target.value)}
+                          placeholder={rec.needsPassword ? '비밀번호 입력' : '비밀번호 불필요'}
+                          disabled={rec.passwordVerified}
+                          visibilityToggle
+                          style={{ width: '100%' }}
+                        />
+                      </div>
                     ),
                   },
                   {
-                    title: '비밀번호',
-                    key: 'password',
-                    render: (_: any, rec: any) => (
-                      <Input.Password
-                        value={rec.password || ''}
-                        onChange={(e) => setPwd(rec.file.name, e.target.value)}
-                        placeholder={rec.needsPassword ? '비밀번호 입력' : '비밀번호 불필요'}
-                        disabled={!rec.needsPassword || rec.passwordVerified}
-                        visibilityToggle
-                        style={{ width: 220 }}
-                      />
-                    ),
-                  },
-                  {
-                    title: '사용 시트 선택',
+                    title: '사용 시트 / 열',
                     key: 'sheets',
-                    render: (_: any, rec: any) => (
+                    render: (_: any, rec: FileItem) => (
                       rec.availableSheets === undefined ? (
                         <Typography.Text type="secondary">시트 읽는 중...</Typography.Text>
                       ) : rec.availableSheets.length === 0 ? (
-                        <Typography.Text type="secondary">시트 없음</Typography.Text>
+                        <Typography.Text type="secondary">{rec.needsPassword ? '비밀번호를 입력해주세요.' : '시트 없음'}</Typography.Text>
                       ) : (
-                        <div>
-                          <Select
-                            mode="multiple"
-                            style={{ minWidth: 260 }}
-                            disabled={rec.needsPassword && !rec.passwordVerified}
-                            value={rec.selectedSheets || []}
-                            onChange={(opts) => {
-                              setItems((prev) => prev.map((p) => (p.file.name === rec.file.name ? { ...p, selectedSheets: opts as string[] } : p)))
-                            }}
-                            options={(rec.availableSheets || []).map((sn: string) => ({ label: sn, value: sn }))}
-                          />
+                        <div style={{ width: '100%' }}>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {(((rec.selectedSheets && rec.selectedSheets.length > 0)
+                                ? rec.selectedSheets
+                                : (rec.availableSheets || [])) as string[]).map((sn) => (
+                              <div key={sn} style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: 8, width: '100%' }}>
+                                <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                  <Tag
+                                    color="blue"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => insertIntoPrompt(`{${sn}}`)}
+                                  >
+                                    시트: {sn}
+                                  </Tag>
+                                  <Button
+                                    size="small"
+                                    type="text"
+                                    danger
+                                    aria-label="시트 삭제"
+                                    icon={<CloseOutlined />}
+                                    onClick={() => {
+                                      setItems((prev) =>
+                                        prev.map((p) => {
+                                          if (p.file.name !== rec.file.name) return p
+                                          const next = (p.selectedSheets || []).filter((s) => s !== sn)
+                                          return { ...p, selectedSheets: next }
+                                        })
+                                      )
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                  {(rec.columnsBySheet?.[sn] || []).length === 0 ? (
+                                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>열 정보 없음</Typography.Text>
+                                  ) : (
+                                    (rec.columnsBySheet?.[sn] || []).map((cn) => {
+                                      // Determine if this column is referenced in the current prompt
+                                      // Only explicit {Sheet:Column} should mark a column as used
+                                      const sheetColRegex = /\{([^:{}]+):([^{}]+)\}/g
+                                      const usedColsMap: Record<string, Set<string>> = {}
+                                      // Collect sheet:column tokens
+                                      let m2: RegExpExecArray | null
+                                      while ((m2 = sheetColRegex.exec(prompt))) {
+                                        const s = String(m2[1])
+                                        const c = String(m2[2])
+                                        if (!usedColsMap[s]) usedColsMap[s] = new Set<string>()
+                                        usedColsMap[s].add(c)
+                                      }
+                                      const isUsed = usedColsMap[sn]?.has(cn) ?? false
+                                      return (
+                                        <Tag
+                                          key={`${sn}:${cn}`}
+                                          color={isUsed ? 'green' : 'geekblue'}
+                                          style={{ cursor: 'pointer' }}
+                                          onClick={() => insertIntoPrompt(`{${sn}:${cn}` + '}' )}
+                                        >
+                                          {cn}{isUsed ? ' •' : ''}
+                                        </Tag>
+                                      )
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                           {rec.needsPassword && !rec.passwordVerified && (
                             <div style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>
                               비밀번호를 입력하면 시트를 선택할 수 있습니다.
@@ -246,12 +442,11 @@ export default function ExcelPage() {
                     ),
                   },
                   {
-                    title: '삭제',
+                    title: '',
                     key: 'actions',
+                    align: 'right' as const,
                     render: (_: any, rec: any) => (
-                      <Button danger icon={<DeleteOutlined />} onClick={() => onDelete(rec.file.name)}>
-                        삭제
-                      </Button>
+                      <Button type="text" danger aria-label="파일 삭제" icon={<MinusCircleOutlined />} onClick={() => onDelete(rec.file.name)} />
                     ),
                   },
                 ]}
@@ -262,6 +457,7 @@ export default function ExcelPage() {
 
         <Card title="프롬프트" size="small">
           <Input.TextArea
+            id="excel-prompt-input"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="프롬프트를 입력하세요"

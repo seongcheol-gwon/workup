@@ -32,6 +32,7 @@ export const typeDefs = gql`
   type Mutation {
     processExcel(files: [Upload!]!, prompt: String!, meta: JSON, mode: String): JSON
     listSheets(file: Upload!, password: String): [String!]!
+    listSheetInfo(file: Upload!, password: String): JSON
   }
 `
 
@@ -88,6 +89,26 @@ export const resolvers = {
       }
       const data = await resp.json()
       return Array.isArray(data?.sheets) ? data.sheets : []
+    },
+    async listSheetInfo(_: any, args: { file: Promise<FileUpload>; password?: string }) {
+      const upload = await args.file
+      const form = new FormData()
+      const stream = upload.createReadStream()
+      form.append('file', stream, { filename: upload.filename, contentType: upload.mimetype })
+      if (args.password) form.append('password', args.password)
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
+      const resp = await fetch(`${backendUrl}/api/excel/list-sheet-info`, {
+        method: 'POST',
+        // @ts-ignore
+        body: form,
+        headers: (form as any).getHeaders ? (form as any).getHeaders() : undefined,
+      })
+      if (!resp.ok) {
+        const text = await resp.text()
+        throw new Error(text || `Backend error ${resp.status}`)
+      }
+      const data = await resp.json()
+      return data
     },
   },
 }

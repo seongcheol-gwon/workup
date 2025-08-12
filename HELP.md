@@ -159,7 +159,7 @@ curl -X POST "http://localhost:8080/api/bedrock/prompt/customize" \
 
 API Key가 설정되지 않은 경우, 서버는 안전한 로컬 폴백 로직을 사용해 간단히 최적화된 프롬프트 형태를 반환합니다.
 
-## 다중 엑셀 처리 API 사용 시 Bedrock 사용 여부 확인 및 출력 모드 선택
+## 다중 스프레드시트 처리 API 사용 시 Bedrock 사용 여부 확인 및 출력 모드 선택
 - Endpoint: POST /api/excel/process-multi (multipart/form-data)
 - Query/Form parameter: mode (optional)
   - mode=detail (기본값): 상세 결과를 반환합니다. 모델 ID, usedBedrock, rows 등의 컨텍스트와 함께 outputText를 포함한 전체 객체를 리턴합니다.

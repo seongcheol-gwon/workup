@@ -11,6 +11,7 @@ export const config = {
 const apolloServer = new ApolloServer({
   typeDefs,
   resolvers,
+  cache: 'bounded',
 })
 
 const start = apolloServer.start()

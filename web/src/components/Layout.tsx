@@ -13,7 +13,7 @@ export default function Layout({ children }: PropsWithChildren) {
       {
         key: '/excel',
         icon: <FileExcelOutlined />,
-        label: <Link href="/excel">엑셀 정보 가져오기</Link>,
+        label: <Link href="/excel">Sheet Sense</Link>,
       },
     ],
     []
@@ -47,7 +47,7 @@ export default function Layout({ children }: PropsWithChildren) {
         <Content style={{ margin: 0, background: token.colorBgLayout }}>
           <div style={{ padding: 24 }}>{children}</div>
         </Content>
-        <Footer style={{ textAlign: 'center' }}>© {new Date().getFullYear()} Musinsa Automation</Footer>
+        <Footer style={{ textAlign: 'center' }}>© {new Date().getFullYear()} Workup MUSINSA</Footer>
       </AntLayout>
     </AntLayout>
   )

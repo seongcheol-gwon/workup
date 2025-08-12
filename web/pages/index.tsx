@@ -13,7 +13,7 @@ export default function Home() {
           좌측 메뉴에서 기능을 선택하세요. 아래 버튼을 눌러 바로 이동할 수 있습니다.
         </Typography.Paragraph>
         <Link href="/excel">
-          <Button type="primary" icon={<FileExcelOutlined />}>엑셀 정보 가져오기</Button>
+          <Button type="primary" icon={<FileExcelOutlined />}>Sheet Sense</Button>
         </Link>
       </Card>
     </Layout>

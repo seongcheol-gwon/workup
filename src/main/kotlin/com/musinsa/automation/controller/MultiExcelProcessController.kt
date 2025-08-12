@@ -111,4 +111,65 @@ class MultiExcelProcessController(
             return ResponseEntity.status(500).body(mapOf("error" to "FAILED_TO_LIST_SHEETS", "message" to (e.message ?: "")))
         }
     }
+
+    @PostMapping(
+        "/list-sheet-info",
+        consumes = [MediaType.MULTIPART_FORM_DATA_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun listSheetInfo(
+        @RequestPart("file") file: MultipartFile,
+        @RequestPart("password", required = false) password: String?
+    ): ResponseEntity<Any> {
+        try {
+            val workbook = try {
+                if (password.isNullOrBlank()) {
+                    try {
+                        org.apache.poi.ss.usermodel.WorkbookFactory.create(file.inputStream)
+                    } catch (e: org.apache.poi.EncryptedDocumentException) {
+                        return ResponseEntity.ok(mapOf("sheets" to emptyList<String>(), "columnsBySheet" to emptyMap<String, List<String>>(), "needsPassword" to true))
+                    }
+                } else {
+                    org.apache.poi.ss.usermodel.WorkbookFactory.create(file.inputStream, password)
+                }
+            } catch (e: org.apache.poi.EncryptedDocumentException) {
+                return ResponseEntity.badRequest().body(mapOf("error" to "PASSWORD_REQUIRED_OR_INVALID"))
+            } catch (e: Exception) {
+                return ResponseEntity.status(400).body(mapOf("error" to "FAILED_TO_OPEN", "message" to (e.message ?: "")))
+            }
+
+            val sheets = mutableListOf<String>()
+            val columnsBySheet = mutableMapOf<String, List<String>>()
+            workbook.use { wb ->
+                for (i in 0 until wb.numberOfSheets) {
+                    val name = wb.getSheetName(i)
+                    sheets.add(name)
+                    val sheet = wb.getSheetAt(i)
+                    val headerRow = sheet.getRow(sheet.firstRowNum)
+                    if (headerRow != null) {
+                        val lastCell = headerRow.lastCellNum.toInt()
+                        val headers = mutableListOf<String>()
+                        for (c in 0 until lastCell) {
+                            val cell = headerRow.getCell(c)
+                            val value = when (cell?.cellType) {
+                                org.apache.poi.ss.usermodel.CellType.STRING -> cell.stringCellValue
+                                org.apache.poi.ss.usermodel.CellType.NUMERIC -> cell.numericCellValue.toString()
+                                org.apache.poi.ss.usermodel.CellType.BOOLEAN -> cell.booleanCellValue.toString()
+                                org.apache.poi.ss.usermodel.CellType.FORMULA -> cell.toString()
+                                else -> cell?.toString() ?: ""
+                            }
+                            val trimmed = value.trim()
+                            if (trimmed.isNotEmpty()) headers.add(trimmed)
+                        }
+                        columnsBySheet[name] = headers
+                    } else {
+                        columnsBySheet[name] = emptyList()
+                    }
+                }
+            }
+            return ResponseEntity.ok(mapOf("sheets" to sheets, "columnsBySheet" to columnsBySheet, "needsPassword" to false))
+        } catch (e: Exception) {
+            return ResponseEntity.status(500).body(mapOf("error" to "FAILED_TO_LIST_SHEET_INFO", "message" to (e.message ?: "")))
+        }
+    }
 }
