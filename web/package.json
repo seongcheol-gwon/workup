@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@apollo/client": "^3.11.8",
+    "@ant-design/icons": "^5.5.6",
+    "antd": "^5.18.3",
     "apollo-server-micro": "^3.13.0",
     "apollo-upload-client": "^18.0.1",
     "cross-fetch": "^4.0.0",

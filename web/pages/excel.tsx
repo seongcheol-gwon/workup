@@ -2,6 +2,9 @@ import React, { useMemo, useState } from 'react'
 import Layout from '../src/components/Layout'
 import { gql, useMutation } from '@apollo/client'
 import * as XLSX from 'xlsx'
+import { Alert, Button, Card, Input, Radio, Select, Space, Table, Tag, Typography, Upload, Spin } from 'antd'
+import type { UploadFile } from 'antd/es/upload/interface'
+import { InboxOutlined, DeleteOutlined, PlayCircleOutlined } from '@ant-design/icons'
 
 const PROCESS_EXCEL = gql`
   mutation ProcessExcel($files: [Upload!]!, $prompt: String!, $meta: JSON, $mode: String) {
@@ -50,21 +53,16 @@ export default function ExcelPage() {
     }
   }
 
-  const onAddFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
+  const addFiles = async (files: File[]) => {
     if (!files.length) return
-
     setItems((prev) => {
       const existingNames = new Set(prev.map((p) => p.file.name))
       const dedup = files.filter((f) => !existingNames.has(f.name))
-      // optimistic add without sheets yet
       return [
         ...prev,
         ...dedup.map((f) => ({ file: f, availableSheets: undefined, selectedSheets: [] as string[], needsPassword: false, passwordVerified: false })),
       ]
     })
-
-    // parse sheets asynchronously and update state when ready
     for (const f of files) {
       const info = await parseSheetsInfo(f)
       setItems((prev) =>
@@ -74,16 +72,21 @@ export default function ExcelPage() {
                 ...it,
                 availableSheets: info.sheets,
                 needsPassword: info.needsPassword,
-                passwordVerified: !info.needsPassword, // if not protected, treat as verified
-                // default select all sheets if any, otherwise empty
+                passwordVerified: !info.needsPassword,
                 selectedSheets: info.sheets.length > 0 ? [...info.sheets] : [],
               }
             : it
         )
       )
     }
+  }
 
-    e.currentTarget.value = ''
+  const onUploadChange = async (info: { fileList: UploadFile[] }) => {
+    const files: File[] = info.fileList
+      .map((f) => f.originFileObj)
+      .filter((f): f is any => !!f)
+      .map((f) => f as File)
+    await addFiles(files)
   }
 
   const onDelete = (name: string) => {
@@ -162,142 +165,148 @@ export default function ExcelPage() {
 
   return (
     <Layout>
-      <div style={{ padding: 16 }}>
-        <h2>엑셀 정보 가져오기</h2>
+      <Space direction="vertical" style={{ width: '100%' }} size={16}>
+        <Typography.Title level={2} style={{ marginTop: 0 }}>엑셀 정보 가져오기</Typography.Title>
 
-        <section style={{ marginTop: 16, background: 'white', padding: 16, borderRadius: 8 }}>
-          <label style={{ display: 'inline-block', marginBottom: 8, fontWeight: 600 }}>엑셀 파일 업로드</label>
-          <input type="file" accept=".xls,.xlsx" multiple onChange={onAddFiles} />
+        <Card title="엑셀 파일 업로드" size="small">
+          <Upload.Dragger
+            multiple
+            accept=".xls,.xlsx"
+            beforeUpload={() => false}
+            onChange={onUploadChange}
+            showUploadList={false}
+          >
+            <p className="ant-upload-drag-icon">
+              <InboxOutlined />
+            </p>
+            <p className="ant-upload-text">파일을 이 영역으로 드래그하거나 클릭하여 업로드</p>
+            <p className="ant-upload-hint">엑셀(.xls, .xlsx) 파일을 여러 개 선택할 수 있습니다.</p>
+          </Upload.Dragger>
 
           {items.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 4px' }}>파일명</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 4px' }}>비밀번호</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 4px' }}>사용 시트 선택</th>
-                    <th style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', padding: '8px 4px' }}>삭제</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((it) => (
-                    <tr key={it.file.name}>
-                      <td style={{ padding: '8px 4px' }}>{it.file.name}</td>
-                      <td style={{ padding: '8px 4px' }}>
-                        <input
-                          type="password"
-                          value={it.password || ''}
-                          onChange={(e) => setPwd(it.file.name, e.target.value)}
-                          placeholder={it.needsPassword ? '비밀번호 입력' : '비밀번호 불필요'}
-                          disabled={!it.needsPassword || it.passwordVerified}
-                        />
-                      </td>
-                      <td style={{ padding: '8px 4px' }}>
-                        {it.availableSheets === undefined ? (
-                          <span style={{ color: '#6b7280' }}>시트 읽는 중...</span>
-                        ) : it.availableSheets.length === 0 ? (
-                          <span style={{ color: '#6b7280' }}>시트 없음</span>
-                        ) : (
-                          <div>
-                            <select
-                              multiple
-                              size={Math.min(8, Math.max(4, it.availableSheets.length))}
-                              disabled={it.needsPassword && !it.passwordVerified}
-                              value={it.selectedSheets || []}
-                              onChange={(e) => {
-                                const opts = Array.from(e.target.selectedOptions).map((o) => o.value)
-                                setItems((prev) =>
-                                  prev.map((p) => (p.file.name === it.file.name ? { ...p, selectedSheets: opts } : p))
-                                )
-                              }}
-                              style={{ minWidth: 240 }}
-                            >
-                              {it.availableSheets.map((sn) => (
-                                <option key={sn} value={sn}>
-                                  {sn}
-                                </option>
-                              ))}
-                            </select>
-                            {it.needsPassword && !it.passwordVerified && (
-                              <div style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>
-                                비밀번호를 입력하면 시트를 선택할 수 있습니다.
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '8px 4px' }}>
-                        <button onClick={() => onDelete(it.file.name)}>삭제</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ marginTop: 16 }}>
+              <Table
+                size="small"
+                pagination={false}
+                rowKey={(r) => r.file.name}
+                dataSource={items}
+                columns={[
+                  {
+                    title: '파일명',
+                    dataIndex: ['file', 'name'],
+                    key: 'name',
+                    render: (_: any, rec: any) => (
+                      <Space direction="vertical" size={0}>
+                        <Typography.Text strong>{rec.file.name}</Typography.Text>
+                        {rec.needsPassword ? <Tag color="gold">보호됨</Tag> : <Tag color="green">공개</Tag>}
+                      </Space>
+                    ),
+                  },
+                  {
+                    title: '비밀번호',
+                    key: 'password',
+                    render: (_: any, rec: any) => (
+                      <Input.Password
+                        value={rec.password || ''}
+                        onChange={(e) => setPwd(rec.file.name, e.target.value)}
+                        placeholder={rec.needsPassword ? '비밀번호 입력' : '비밀번호 불필요'}
+                        disabled={!rec.needsPassword || rec.passwordVerified}
+                        visibilityToggle
+                        style={{ width: 220 }}
+                      />
+                    ),
+                  },
+                  {
+                    title: '사용 시트 선택',
+                    key: 'sheets',
+                    render: (_: any, rec: any) => (
+                      rec.availableSheets === undefined ? (
+                        <Typography.Text type="secondary">시트 읽는 중...</Typography.Text>
+                      ) : rec.availableSheets.length === 0 ? (
+                        <Typography.Text type="secondary">시트 없음</Typography.Text>
+                      ) : (
+                        <div>
+                          <Select
+                            mode="multiple"
+                            style={{ minWidth: 260 }}
+                            disabled={rec.needsPassword && !rec.passwordVerified}
+                            value={rec.selectedSheets || []}
+                            onChange={(opts) => {
+                              setItems((prev) => prev.map((p) => (p.file.name === rec.file.name ? { ...p, selectedSheets: opts as string[] } : p)))
+                            }}
+                            options={(rec.availableSheets || []).map((sn: string) => ({ label: sn, value: sn }))}
+                          />
+                          {rec.needsPassword && !rec.passwordVerified && (
+                            <div style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>
+                              비밀번호를 입력하면 시트를 선택할 수 있습니다.
+                            </div>
+                          )}
+                        </div>
+                      )
+                    ),
+                  },
+                  {
+                    title: '삭제',
+                    key: 'actions',
+                    render: (_: any, rec: any) => (
+                      <Button danger icon={<DeleteOutlined />} onClick={() => onDelete(rec.file.name)}>
+                        삭제
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
             </div>
           )}
-        </section>
+        </Card>
 
-        <section style={{ marginTop: 16, background: 'white', padding: 16, borderRadius: 8 }}>
-          <label style={{ display: 'inline-block', marginBottom: 8, fontWeight: 600 }}>프롬프트</label>
-          <textarea
+        <Card title="프롬프트" size="small">
+          <Input.TextArea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="프롬프트를 입력하세요"
             rows={6}
-            style={{ width: '100%', resize: 'vertical' }}
           />
           <div style={{ marginTop: 8 }}>
-            <label>
-              <input
-                type="radio"
-                value="detail"
-                checked={mode === 'detail'}
-                onChange={() => setMode('detail')}
-              />{' '}
-              상세 모드
-            </label>
-            <label style={{ marginLeft: 16 }}>
-              <input type="radio" value="json" checked={mode === 'json'} onChange={() => setMode('json')} /> JSON 모드
-            </label>
+            <Radio.Group value={mode} onChange={(e) => setMode(e.target.value)}>
+              <Radio.Button value="detail">상세 모드</Radio.Button>
+              <Radio.Button value="json">JSON 모드</Radio.Button>
+            </Radio.Group>
           </div>
-        </section>
+        </Card>
 
-        <section style={{ marginTop: 16, background: 'white', padding: 16, borderRadius: 8 }}>
-          <button
-            disabled={!canRun || loading}
-            onClick={handleRun}
-            style={{
-              background: !canRun || loading ? '#9ca3af' : '#2563eb',
-              color: 'white',
-              padding: '10px 16px',
-              borderRadius: 6,
-              border: 'none',
-              cursor: !canRun || loading ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {loading ? '실행 중... (AI 처리)' : '실행'}
-          </button>
-          {error && (
-            <div style={{ color: 'red', marginTop: 8 }}>에러: {error.message}</div>
-          )}
-        </section>
+        <Card size="small">
+          <Space>
+            <Button
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              disabled={!canRun}
+              loading={loading}
+              onClick={handleRun}
+            >
+              실행
+            </Button>
+            {error && <Alert type="error" message={`에러: ${error.message}`} showIcon />}
+          </Space>
+        </Card>
 
         {(loading || result) && (
-          <section style={{ marginTop: 16, background: 'white', padding: 16, borderRadius: 8 }}>
-            <h3>결과</h3>
+          <Card title="결과" size="small">
             {loading ? (
-              <div>AI가 데이터 확인중입니다.</div>
+              <Space align="center">
+                <Spin />
+                <Typography.Text>AI가 데이터 확인중입니다.</Typography.Text>
+              </Space>
             ) : (
               result && (
-                <pre style={{ whiteSpace: 'pre-wrap' }}>
+                <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
                   {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
                 </pre>
               )
             )}
-          </section>
+          </Card>
         )}
-      </div>
+      </Space>
     </Layout>
   )
 }
