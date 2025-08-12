@@ -72,4 +72,43 @@ class MultiExcelProcessController(
         }
         return null
     }
+
+    @PostMapping(
+        "/list-sheets",
+        consumes = [MediaType.MULTIPART_FORM_DATA_VALUE],
+        produces = [MediaType.APPLICATION_JSON_VALUE]
+    )
+    fun listSheets(
+        @RequestPart("file") file: MultipartFile,
+        @RequestPart("password", required = false) password: String?
+    ): ResponseEntity<Any> {
+        try {
+            // Try open without password if none provided
+            val sheets = mutableListOf<String>()
+            val workbook = try {
+                if (password.isNullOrBlank()) {
+                    try {
+                        org.apache.poi.ss.usermodel.WorkbookFactory.create(file.inputStream)
+                    } catch (e: org.apache.poi.EncryptedDocumentException) {
+                        return ResponseEntity.ok(mapOf("sheets" to emptyList<String>(), "needsPassword" to true))
+                    }
+                } else {
+                    org.apache.poi.ss.usermodel.WorkbookFactory.create(file.inputStream, password)
+                }
+            } catch (e: org.apache.poi.EncryptedDocumentException) {
+                return ResponseEntity.badRequest().body(mapOf("error" to "PASSWORD_REQUIRED_OR_INVALID"))
+            } catch (e: Exception) {
+                return ResponseEntity.status(400).body(mapOf("error" to "FAILED_TO_OPEN", "message" to (e.message ?: "")))
+            }
+
+            workbook.use { wb ->
+                for (i in 0 until wb.numberOfSheets) {
+                    sheets.add(wb.getSheetName(i))
+                }
+            }
+            return ResponseEntity.ok(mapOf("sheets" to sheets, "needsPassword" to false))
+        } catch (e: Exception) {
+            return ResponseEntity.status(500).body(mapOf("error" to "FAILED_TO_LIST_SHEETS", "message" to (e.message ?: "")))
+        }
+    }
 }

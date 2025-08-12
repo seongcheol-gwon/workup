@@ -192,3 +192,35 @@ curl -X POST "http://localhost:8080/api/excel/process-multi?mode=json" \
   -F "files=@/path/a.xlsx" \
   -F "prompt=상품명으로 카드번호를 찾아서 결과를 JSON으로 반환"
 ```
+
+
+---
+
+## Frontend (Next.js + GraphQL)
+
+The frontend lives under the `web/` directory. Do NOT run `npx next build` from the repository root because there is no Next.js project at the root. Instead, use the provided root-level npm scripts which delegate into `web/`.
+
+- Development (from project root):
+  - `npm run web:dev` → runs Next.js dev server at http://localhost:3000
+- Build (from project root):
+  - `npm run web:build` → executes `next build` inside `web/`
+- Start production server (after build):
+  - `npm run web:start`
+
+Note: The root-level scripts automatically install web/ dependencies before running, so you can run them directly without a prior manual npm install.
+
+Alternatively, you can execute commands inside the `web/` folder directly:
+
+- `cd web && npm install`
+- `npm run dev` (for development)
+- `npm run build` (to build)
+- `npm run start` (to start production server)
+
+Optional: configure the backend URL for the GraphQL API route (default `http://localhost:8080`):
+
+- Set env var before starting Next.js: `export BACKEND_URL=http://localhost:8080`
+
+Feature page:
+- Navigate to http://localhost:3000/excel
+- Upload multiple Excel files (per-file delete and password input), enter a prompt, choose mode (detail/json), and click 실행.
+- Button is disabled until required fields are set and shows a loading state while processing.

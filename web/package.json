@@ -1,0 +1,32 @@
+{
+  "name": "automation-web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "predev": "[ -x node_modules/.bin/next ] || npm install --no-audit --no-fund",
+    "prebuild": "[ -x node_modules/.bin/next ] || npm install --no-audit --no-fund",
+    "prestart": "[ -x node_modules/.bin/next ] || npm install --no-audit --no-fund",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.11.8",
+    "apollo-server-micro": "^3.13.0",
+    "apollo-upload-client": "^18.0.1",
+    "cross-fetch": "^4.0.0",
+    "form-data": "^4.0.0",
+    "graphql": "^16.9.0",
+    "graphql-type-json": "^0.3.2",
+    "graphql-upload": "^16.0.2",
+    "next": "^13.5.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/react": "19.1.10",
+    "typescript": "5.9.2"
+  }
+}

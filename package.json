@@ -1,0 +1,16 @@
+{
+  "name": "automation-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "preweb:dev": "npm --prefix web install --no-audit --no-fund",
+    "preweb:build": "npm --prefix web install --no-audit --no-fund",
+    "preweb:start": "npm --prefix web install --no-audit --no-fund",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build",
+    "web:start": "npm --prefix web run start",
+    "dev": "npm run web:dev",
+    "build": "npm run web:build",
+    "start": "npm run web:start"
+  }
+}
