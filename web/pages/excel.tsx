@@ -24,8 +24,8 @@ const LIST_SHEET_INFO = gql`
 `
 
 const SAVE_PROMPT = gql`
-  mutation SavePrompt($prompt: String!, $type: String) {
-    savePrompt(prompt: $prompt, type: $type)
+  mutation SavePrompt($prompt: String!, $type: String, $name: String) {
+    savePrompt(prompt: $prompt, type: $type, name: $name)
   }
 `
 
@@ -45,6 +45,7 @@ export default function ExcelPage() {
   const [mode, setMode] = useState<'detail' | 'json'>('detail')
   const [result, setResult] = useState<any>(null)
   const [canSave, setCanSave] = useState(false)
+  const [promptName, setPromptName] = useState('')
 
   const [run, { loading, error }] = useMutation(PROCESS_EXCEL, {
     onCompleted: (data) => {
@@ -483,11 +484,17 @@ export default function ExcelPage() {
             placeholder="프롬프트를 입력하세요"
             rows={6}
           />
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
             <Radio.Group value={mode} onChange={(e) => setMode(e.target.value)}>
               <Radio.Button value="detail">상세 모드</Radio.Button>
               <Radio.Button value="json">JSON 모드</Radio.Button>
             </Radio.Group>
+            <Input
+              value={promptName}
+              onChange={(e) => setPromptName(e.target.value)}
+              placeholder="이름 (저장 시 필요)"
+              style={{ maxWidth: 320 }}
+            />
           </div>
         </Card>
 
@@ -504,12 +511,13 @@ export default function ExcelPage() {
             </Button>
             <Button
               type="default"
-              disabled={!canSave || !prompt.trim()}
+              disabled={!canSave || !prompt.trim() || !promptName.trim()}
               loading={saving}
               onClick={() => {
                 const p = prompt.trim()
-                if (!p) return
-                savePromptMut({ variables: { prompt: p, type: 'SHEET' } })
+                const n = promptName.trim()
+                if (!p || !n) return
+                savePromptMut({ variables: { prompt: p, type: 'SHEET', name: n } })
               }}
             >
               저장

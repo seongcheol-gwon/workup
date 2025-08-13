@@ -20,6 +20,11 @@ export default function Layout({ children }: PropsWithChildren) {
         icon: <FileExcelOutlined />,
         label: <Link href="/json-to-sheet">Json To Sheet</Link>,
       },
+      {
+        key: '/workflow',
+        icon: <FileExcelOutlined />,
+        label: <Link href="/workflow">Workflow</Link>,
+      },
     ],
     []
   )

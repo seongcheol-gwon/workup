@@ -15,6 +15,9 @@ data class PromptRecord(
     @Column(nullable = false, length = 50)
     val type: String,
 
+    @Column(length = 255)
+    val name: String? = null,
+
     @Column(nullable = false)
     val createdAt: LocalDateTime = LocalDateTime.now()
 )

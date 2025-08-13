@@ -5,8 +5,8 @@ import { PlayCircleOutlined, SaveOutlined } from '@ant-design/icons'
 import { gql, useMutation } from '@apollo/client'
 
 const SAVE_PROMPT = gql`
-  mutation SavePrompt($prompt: String!, $type: String) {
-    savePrompt(prompt: $prompt, type: $type)
+  mutation SavePrompt($prompt: String!, $type: String, $name: String) {
+    savePrompt(prompt: $prompt, type: $type, name: $name)
   }
 `
 
@@ -17,6 +17,7 @@ export default function JsonToSheetPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [canSave, setCanSave] = useState(false)
+  const [promptName, setPromptName] = useState('')
 
   const [savePromptMut, { loading: saving }] = useMutation(SAVE_PROMPT, {
     onCompleted: () => {
@@ -33,10 +34,20 @@ export default function JsonToSheetPage() {
     setError(null)
     setLoading(true)
     try {
+      // Support pipe-delimited prompt: "<prompt>|<filename>"
+      const raw = prompt || ''
+      const parts = raw.split('|')
+      const promptText = parts.length > 1 ? parts[0].trim() : raw.trim()
+      const fileNameFromPrompt = parts.length > 1 ? parts.slice(1).join('|').trim() : ''
+      // Prefer filename from pipe if provided; otherwise use input field
+      const finalSheetName = (fileNameFromPrompt && fileNameFromPrompt.length > 0)
+        ? fileNameFromPrompt
+        : (sheetName?.trim() || undefined)
+
       const res = await fetch('/api/json-to-sheet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ json: jsonText, prompt, sheetName: sheetName || undefined }),
+        body: JSON.stringify({ json: jsonText, prompt: promptText, sheetName: finalSheetName }),
       })
       if (!res.ok) {
         throw new Error(`서버 오류: ${res.status} ${res.statusText}`)
@@ -44,7 +55,7 @@ export default function JsonToSheetPage() {
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
-      const filename = (sheetName?.trim() || 'json_to_sheet') + '.xlsx'
+      const filename = ((finalSheetName && finalSheetName.trim()) || 'json_to_sheet') + '.xlsx'
       a.href = url
       a.download = filename
       document.body.appendChild(a)
@@ -64,7 +75,8 @@ export default function JsonToSheetPage() {
   const save = async () => {
     const filename = (sheetName?.trim() || 'json_to_sheet')
     const payload = `${prompt}|${filename}`
-    await savePromptMut({ variables: { prompt: payload, type: 'JSONTOSHEET' } })
+    const name = promptName.trim()
+    await savePromptMut({ variables: { prompt: payload, type: 'JSONTOSHEET', name } })
   }
 
   return (
@@ -95,6 +107,12 @@ export default function JsonToSheetPage() {
               placeholder="파일 이름 (확장자 제외, 선택)"
               style={{ maxWidth: 340 }}
             />
+            <Input
+              value={promptName}
+              onChange={(e) => setPromptName(e.target.value)}
+              placeholder="이름 (저장 시 필요)"
+              style={{ maxWidth: 340 }}
+            />
           </div>
         </Card>
 
@@ -103,7 +121,7 @@ export default function JsonToSheetPage() {
             <Button type="primary" icon={<PlayCircleOutlined />} onClick={run} disabled={!canRun} loading={loading}>
               실행
             </Button>
-            <Button icon={<SaveOutlined />} onClick={save} disabled={!canSave} loading={saving}>
+            <Button icon={<SaveOutlined />} onClick={save} disabled={!canSave || !promptName.trim()} loading={saving}>
               저장
             </Button>
             {error && <Alert type="error" message={error} showIcon />}

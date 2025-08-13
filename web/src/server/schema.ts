@@ -27,13 +27,14 @@ export const typeDefs = gql`
 
   type Query {
     _health: String
+    listPrompts(type: String): [JSON!]!
   }
 
   type Mutation {
     processExcel(files: [Upload!]!, prompt: String!, meta: JSON, mode: String): JSON
     listSheets(file: Upload!, password: String): [String!]!
     listSheetInfo(file: Upload!, password: String): JSON
-    savePrompt(prompt: String!, type: String): JSON
+    savePrompt(prompt: String!, type: String, name: String): JSON
   }
 `
 
@@ -42,6 +43,17 @@ export const resolvers = {
   JSON: GraphQLJSON,
   Query: {
     _health: () => 'ok',
+    async listPrompts(_: any, args: { type?: string }) {
+      const backendUrl = process.env.BACKEND_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
+      const url = args.type ? `${backendUrl}/api/prompt/list?type=${encodeURIComponent(args.type)}` : `${backendUrl}/api/prompt/list`
+      const resp = await fetch(url)
+      if (!resp.ok) {
+        const text = await resp.text()
+        throw new Error(text || `Backend error ${resp.status}`)
+      }
+      const data = await resp.json()
+      return Array.isArray(data) ? data : []
+    },
   },
   Mutation: {
     async processExcel(_: any, args: { files: Promise<FileUpload>[]; prompt: string; meta?: any; mode?: string }, ctx: any) {
@@ -56,7 +68,7 @@ export const resolvers = {
       form.append('meta', JSON.stringify(args.meta || {}))
       if (args.mode) form.append('mode', args.mode)
 
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
+      const backendUrl = process.env.BACKEND_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
       const resp = await fetch(`${backendUrl}/api/excel/process-multi`, {
         method: 'POST',
         // @ts-ignore
@@ -77,7 +89,7 @@ export const resolvers = {
       const stream = upload.createReadStream()
       form.append('file', stream, { filename: upload.filename, contentType: upload.mimetype })
       if (args.password) form.append('password', args.password)
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
+      const backendUrl = process.env.BACKEND_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
       const resp = await fetch(`${backendUrl}/api/excel/list-sheets`, {
         method: 'POST',
         // @ts-ignore
@@ -97,7 +109,7 @@ export const resolvers = {
       const stream = upload.createReadStream()
       form.append('file', stream, { filename: upload.filename, contentType: upload.mimetype })
       if (args.password) form.append('password', args.password)
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
+      const backendUrl = process.env.BACKEND_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
       const resp = await fetch(`${backendUrl}/api/excel/list-sheet-info`, {
         method: 'POST',
         // @ts-ignore
@@ -111,12 +123,12 @@ export const resolvers = {
       const data = await resp.json()
       return data
     },
-    async savePrompt(_: any, args: { prompt: string; type?: string }) {
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
+    async savePrompt(_: any, args: { prompt: string; type?: string; name?: string }) {
+      const backendUrl = process.env.BACKEND_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
       const resp = await fetch(`${backendUrl}/api/prompt/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: args.prompt, type: args.type || 'SHEET' }),
+        body: JSON.stringify({ prompt: args.prompt, type: args.type || 'SHEET', name: args.name }),
       })
       if (!resp.ok) {
         const text = await resp.text()
