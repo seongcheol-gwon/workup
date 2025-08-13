@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import Layout from '../src/components/Layout'
+import PageTitle from '../src/components/PageTitle'
 import { gql, useMutation } from '@apollo/client'
 import * as XLSX from 'xlsx'
 import { Alert, Button, Card, Input, Radio, Select, Space, Table, Tag, Typography, Upload, Spin, message } from 'antd'
@@ -325,7 +326,7 @@ export default function ExcelPage() {
   return (
     <Layout>
       <Space direction="vertical" style={{ width: '100%' }} size={16}>
-        <Typography.Title level={2} style={{ marginTop: 0 }}>Sheet Sense</Typography.Title>
+        <PageTitle title="Sheet Sense" />
 
         <Card title="스프레드시트 파일 업로드" size="small">
           <Upload.Dragger

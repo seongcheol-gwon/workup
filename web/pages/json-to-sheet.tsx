@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import Layout from '../src/components/Layout'
+import PageTitle from '../src/components/PageTitle'
 import { Button, Card, Input, Space, Typography, Alert, message } from 'antd'
 import { PlayCircleOutlined, SaveOutlined } from '@ant-design/icons'
 import { gql, useMutation } from '@apollo/client'
@@ -82,7 +83,7 @@ export default function JsonToSheetPage() {
   return (
     <Layout>
       <Space direction="vertical" style={{ width: '100%' }} size={16}>
-        <Typography.Title level={2} style={{ marginTop: 0 }}>Json To Sheet</Typography.Title>
+        <PageTitle title="Json To Sheet" />
 
         <Card title="입력 JSON" size="small">
           <Input.TextArea

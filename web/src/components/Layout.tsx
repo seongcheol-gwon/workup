@@ -2,12 +2,14 @@ import Link from 'next/link'
 import React, { PropsWithChildren, useMemo, useState } from 'react'
 import { Layout as AntLayout, Menu, theme, Typography } from 'antd'
 import { FileExcelOutlined } from '@ant-design/icons'
+import { useRouter } from 'next/router'
 
 const { Header, Sider, Content, Footer } = AntLayout
 
 export default function Layout({ children }: PropsWithChildren) {
   const { token } = theme.useToken()
   const [collapsed, setCollapsed] = useState(false)
+  const router = useRouter()
   const items = useMemo(
     () => [
       {
@@ -28,6 +30,16 @@ export default function Layout({ children }: PropsWithChildren) {
     ],
     []
   )
+
+  // Determine the active menu key based on the current pathname
+  const activeKey = useMemo(() => {
+    const path = router.pathname || '/'
+    if (path.startsWith('/excel')) return '/excel'
+    if (path.startsWith('/json-to-sheet')) return '/json-to-sheet'
+    if (path.startsWith('/workflow')) return '/workflow'
+    // Fallback: if on index or other route, select none
+    return ''
+  }, [router.pathname])
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
@@ -51,7 +63,7 @@ export default function Layout({ children }: PropsWithChildren) {
             }}
           />
         </div>
-        <Menu mode="inline" items={items} defaultSelectedKeys={["/excel"]} />
+        <Menu mode="inline" items={items} selectedKeys={activeKey ? [activeKey] : []} />
       </Sider>
       <AntLayout>
         <Content style={{ margin: 0, background: token.colorBgLayout }}>

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Layout from '../src/components/Layout'
+import PageTitle from '../src/components/PageTitle'
 import { gql, useLazyQuery, useMutation } from '@apollo/client'
 import * as XLSX from 'xlsx'
-import { Alert, Button, Card, Col, Collapse, Divider, Input, List, Modal, Radio, Row, Select, Space, Spin, Table, Tag, Typography, Upload, message, Progress } from 'antd'
+import { Alert, Button, Card, Col, Collapse, Divider, Input, List, Modal, Radio, Row, Select, Space, Spin, Table, Tag, Typography, Upload, message } from 'antd'
 import { InboxOutlined, PlayCircleOutlined, DeleteOutlined, LockOutlined, UnlockOutlined, PlusOutlined, ReloadOutlined, FileExcelOutlined, FileTextOutlined, DownOutlined, UpOutlined } from '@ant-design/icons'
 
 const LIST_PROMPTS = gql`
@@ -488,7 +489,7 @@ export default function WorkflowPage() {
   return (
     <Layout>
       <Space direction="vertical" style={{ width: '100%' }} size={16}>
-        <Typography.Title level={2} style={{ marginTop: 0 }}>Workflow</Typography.Title>
+        <PageTitle title="Workflow" />
 
         <Row gutter={16}>
           <Col span={8}>
@@ -538,17 +539,9 @@ export default function WorkflowPage() {
           <Col span={16}>
             <Card
               title={(() => {
-                const total = steps.length
-                const done = steps.filter((s) => s.status === 'done').length
-                const running = steps.some((s) => s.status === 'running')
-                const percent = total > 0 ? Math.round((done / total) * 100) : 0
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span>워크플로우</span>
-                    <Tag color="geekblue">{done}/{total}</Tag>
-                    <div style={{ width: 180 }}>
-                      <Progress percent={percent} size="small" status={running ? 'active' : (done === total && total > 0 ? 'success' : 'normal')} showInfo={false} />
-                    </div>
                   </div>
                 )
               })()}
