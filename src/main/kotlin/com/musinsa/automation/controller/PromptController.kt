@@ -21,8 +21,9 @@ class PromptController(
         if (cleaned.isEmpty()) {
             return ResponseEntity.badRequest().body(mapOf("error" to "PROMPT_EMPTY"))
         }
-        // Force type to SHEET as per requirement
-        val record = PromptRecord(prompt = cleaned, type = "SHEET")
+        // Respect provided type (defaults to SHEET if omitted)
+        val t = req.type?.trim()?.uppercase().takeUnless { it.isNullOrEmpty() } ?: "SHEET"
+        val record = PromptRecord(prompt = cleaned, type = t)
         val saved = repo.save(record)
         return ResponseEntity.ok(mapOf(
             "id" to saved.id,

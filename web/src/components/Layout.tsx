@@ -15,6 +15,11 @@ export default function Layout({ children }: PropsWithChildren) {
         icon: <FileExcelOutlined />,
         label: <Link href="/excel">Sheet Sense</Link>,
       },
+      {
+        key: '/json-to-sheet',
+        icon: <FileExcelOutlined />,
+        label: <Link href="/json-to-sheet">Json To Sheet</Link>,
+      },
     ],
     []
   )
