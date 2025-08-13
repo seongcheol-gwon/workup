@@ -33,6 +33,7 @@ export const typeDefs = gql`
     processExcel(files: [Upload!]!, prompt: String!, meta: JSON, mode: String): JSON
     listSheets(file: Upload!, password: String): [String!]!
     listSheetInfo(file: Upload!, password: String): JSON
+    savePrompt(prompt: String!, type: String): JSON
   }
 `
 
@@ -106,6 +107,20 @@ export const resolvers = {
       if (!resp.ok) {
         const text = await resp.text()
         throw new Error(text || `Backend error ${resp.status}`)
+      }
+      const data = await resp.json()
+      return data
+    },
+    async savePrompt(_: any, args: { prompt: string; type?: string }) {
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
+      const resp = await fetch(`${backendUrl}/api/prompt/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: args.prompt, type: args.type || 'SHEET' }),
+      })
+      if (!resp.ok) {
+        const text = await resp.text()
+        return { error: true, status: resp.status, message: text }
       }
       const data = await resp.json()
       return data

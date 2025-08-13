@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import Layout from '../src/components/Layout'
 import { gql, useMutation } from '@apollo/client'
 import * as XLSX from 'xlsx'
-import { Alert, Button, Card, Input, Radio, Select, Space, Table, Tag, Typography, Upload, Spin } from 'antd'
+import { Alert, Button, Card, Input, Radio, Select, Space, Table, Tag, Typography, Upload, Spin, message } from 'antd'
 import { InboxOutlined, DeleteOutlined, PlayCircleOutlined, CloseOutlined, MinusCircleOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 
 const PROCESS_EXCEL = gql`
@@ -23,6 +23,12 @@ const LIST_SHEET_INFO = gql`
   }
 `
 
+const SAVE_PROMPT = gql`
+  mutation SavePrompt($prompt: String!, $type: String) {
+    savePrompt(prompt: $prompt, type: $type)
+  }
+`
+
 type FileItem = {
   file: File
   password?: string
@@ -38,14 +44,27 @@ export default function ExcelPage() {
   const [prompt, setPrompt] = useState('')
   const [mode, setMode] = useState<'detail' | 'json'>('detail')
   const [result, setResult] = useState<any>(null)
+  const [canSave, setCanSave] = useState(false)
 
   const [run, { loading, error }] = useMutation(PROCESS_EXCEL, {
     onCompleted: (data) => {
       setResult(data?.processExcel)
+      setCanSave(true)
+    },
+    onError: () => {
+      setCanSave(false)
     },
   })
   const [fetchSheets] = useMutation(LIST_SHEETS)
   const [fetchSheetInfo] = useMutation(LIST_SHEET_INFO)
+  const [savePromptMut, { loading: saving }] = useMutation(SAVE_PROMPT, {
+    onCompleted: () => {
+      message.success('프롬프트가 저장되었습니다.')
+    },
+    onError: (e) => {
+      message.error(`저장 실패: ${e.message}`)
+    },
+  })
 
   const parseSheetsInfo = async (
     file: File,
@@ -214,6 +233,7 @@ export default function ExcelPage() {
   const handleRun = async () => {
       // Clear previous result and show loading state message
       setResult(null)
+      setCanSave(false)
     const passwords: Record<string, string> = {}
     const sheetNames: Record<string, string[]> = {}
     items.forEach((it) => {
@@ -459,7 +479,7 @@ export default function ExcelPage() {
           <Input.TextArea
             id="excel-prompt-input"
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e) => { setPrompt(e.target.value); setCanSave(false) }}
             placeholder="프롬프트를 입력하세요"
             rows={6}
           />
@@ -481,6 +501,18 @@ export default function ExcelPage() {
               onClick={handleRun}
             >
               실행
+            </Button>
+            <Button
+              type="default"
+              disabled={!canSave || !prompt.trim()}
+              loading={saving}
+              onClick={() => {
+                const p = prompt.trim()
+                if (!p) return
+                savePromptMut({ variables: { prompt: p, type: 'SHEET' } })
+              }}
+            >
+              저장
             </Button>
             {error && <Alert type="error" message={`에러: ${error.message}`} showIcon />}
           </Space>
