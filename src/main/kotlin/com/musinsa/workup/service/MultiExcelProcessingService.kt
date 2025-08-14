@@ -177,9 +177,7 @@ class MultiExcelProcessingService(
         files: List<MultipartFile>,
         prompt: String,
         passwords: Map<String, String> = emptyMap(),
-        sheetNames: Map<String, List<String>> = emptyMap(),
-        maxRowsPerSheet: Int = 200,
-        maxColsPerRow: Int = 20
+        sheetNames: Map<String, List<String>> = emptyMap()
     ): MultiProcessResult {
         require(files.isNotEmpty()) { "files must not be empty" }
         require(prompt.isNotBlank()) { "prompt must not be blank" }
@@ -219,10 +217,10 @@ class MultiExcelProcessingService(
                             .append("Sheet: ").append(sName).append('\n')
                             .append("Data (TSV):\n")
 
-                        val lastRow = min(sheet.lastRowNum, maxRowsPerSheet - 1)
+                        val lastRow = sheet.lastRowNum
                         for (r in 0..lastRow) {
                             val row = sheet.getRow(r) ?: continue
-                            val lastCell = min((row.lastCellNum.toInt() - 1).coerceAtLeast(0), maxColsPerRow - 1)
+                            val lastCell = (row.lastCellNum.toInt() - 1).coerceAtLeast(0)
                             val cells = mutableListOf<String>()
                             for (c in 0..lastCell) {
                                 val cell = row.getCell(c)

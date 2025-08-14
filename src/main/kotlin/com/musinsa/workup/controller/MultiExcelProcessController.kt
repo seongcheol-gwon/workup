@@ -17,9 +17,7 @@ class MultiExcelProcessController(
 ) {
     data class MultiMeta(
         val passwords: Map<String, String>? = null, // key: originalFilename
-        val sheetNames: Map<String, List<String>>? = null, // key: originalFilename, value: allowed sheets
-        val maxRowsPerSheet: Int = 200,
-        val maxColsPerRow: Int = 20
+        val sheetNames: Map<String, List<String>>? = null // key: originalFilename, value: allowed sheets
     )
 
     @PostMapping(
@@ -39,9 +37,7 @@ class MultiExcelProcessController(
             files = files,
             prompt = prompt,
             passwords = meta.passwords ?: emptyMap(),
-            sheetNames = meta.sheetNames ?: emptyMap(),
-            maxRowsPerSheet = meta.maxRowsPerSheet,
-            maxColsPerRow = meta.maxColsPerRow
+            sheetNames = meta.sheetNames ?: emptyMap()
         )
         if (mode.equals("json", ignoreCase = true)) {
             val json = extractJsonObjectOrArray(result.results.firstOrNull()?.outputText ?: "")

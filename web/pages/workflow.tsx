@@ -295,7 +295,7 @@ export default function WorkflowPage() {
             } catch {}
           }
 
-          const meta = { passwords, sheetNames, maxRowsPerSheet: maxRows || 200, maxColsPerRow: maxCols || 30 }
+          const meta = { passwords, sheetNames }
           const res = await runExcel({ variables: { files: sheetItems.map((it) => it.file), prompt: promptToSend, meta, mode: sheetMode } })
           const payload = res?.data?.processExcel
           let outText: string = ''

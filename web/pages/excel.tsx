@@ -309,8 +309,6 @@ export default function ExcelPage() {
     const meta = {
       passwords,
       sheetNames,
-      maxRowsPerSheet: computedMaxRows > 0 ? computedMaxRows : 200,
-      maxColsPerRow: computedMaxCols > 0 ? computedMaxCols : 30,
     }
 
     await run({
