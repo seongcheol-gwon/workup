@@ -108,12 +108,6 @@ export default function JsonToSheetPage() {
               placeholder="파일 이름 (확장자 제외, 선택)"
               style={{ maxWidth: 340 }}
             />
-            <Input
-              value={promptName}
-              onChange={(e) => setPromptName(e.target.value)}
-              placeholder="이름 (저장 시 필요)"
-              style={{ maxWidth: 340 }}
-            />
           </div>
         </Card>
 
@@ -122,6 +116,12 @@ export default function JsonToSheetPage() {
             <Button type="primary" icon={<PlayCircleOutlined />} onClick={run} disabled={!canRun} loading={loading}>
               실행
             </Button>
+            <Input
+              value={promptName}
+              onChange={(e) => setPromptName(e.target.value)}
+              placeholder="이름 (저장 시 필요)"
+              style={{ maxWidth: 340 }}
+            />
             <Button icon={<SaveOutlined />} onClick={save} disabled={!canSave || !promptName.trim()} loading={saving}>
               저장
             </Button>

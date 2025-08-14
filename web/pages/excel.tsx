@@ -485,17 +485,11 @@ export default function ExcelPage() {
             placeholder="프롬프트를 입력하세요"
             rows={6}
           />
-          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ marginTop: 8 }}>
             <Radio.Group value={mode} onChange={(e) => setMode(e.target.value)}>
               <Radio.Button value="detail">상세 모드</Radio.Button>
               <Radio.Button value="json">JSON 모드</Radio.Button>
             </Radio.Group>
-            <Input
-              value={promptName}
-              onChange={(e) => setPromptName(e.target.value)}
-              placeholder="이름 (저장 시 필요)"
-              style={{ maxWidth: 320 }}
-            />
           </div>
         </Card>
 
@@ -510,6 +504,12 @@ export default function ExcelPage() {
             >
               실행
             </Button>
+            <Input
+              value={promptName}
+              onChange={(e) => setPromptName(e.target.value)}
+              placeholder="이름 (저장 시 필요)"
+              style={{ maxWidth: 320 }}
+            />
             <Button
               type="default"
               disabled={!canSave || !prompt.trim() || !promptName.trim()}
