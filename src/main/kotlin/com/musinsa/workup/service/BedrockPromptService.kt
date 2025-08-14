@@ -1,9 +1,9 @@
-package com.musinsa.automation.service
+package com.musinsa.workup.service
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.musinsa.automation.config.BedrockProperties
+import com.musinsa.workup.config.BedrockProperties
 import org.springframework.stereotype.Service
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.core.SdkBytes

@@ -1,7 +1,7 @@
-package com.musinsa.automation.controller
+package com.musinsa.workup.controller
 
-import com.musinsa.automation.model.PromptRecord
-import com.musinsa.automation.repository.PromptRecordRepository
+import com.musinsa.workup.model.PromptRecord
+import com.musinsa.workup.repository.PromptRecordRepository
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 

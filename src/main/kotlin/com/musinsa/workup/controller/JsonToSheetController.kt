@@ -1,14 +1,21 @@
-package com.musinsa.automation.controller
+package com.musinsa.workup.controller
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.musinsa.automation.config.BedrockProperties
+import com.musinsa.workup.config.BedrockProperties
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.core.SdkBytes
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient
+import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest
+import java.io.ByteArrayOutputStream
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import kotlin.collections.get
 
 @RestController
 @RequestMapping("/api/json-to-sheet")
@@ -70,16 +77,16 @@ class JsonToSheetController(
         val mapper = jacksonObjectMapper()
         val jsonBody = mapper.writeValueAsString(body)
 
-        val client = software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient.builder()
-            .region(software.amazon.awssdk.regions.Region.of(props.region))
-            .credentialsProvider(software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider.create())
+        val client = BedrockRuntimeClient.builder()
+            .region(Region.of(props.region))
+            .credentialsProvider(DefaultCredentialsProvider.create())
             .build()
 
-        val request = software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest.builder()
+        val request = InvokeModelRequest.builder()
             .modelId(props.modelId)
             .contentType("application/json")
             .accept("application/json")
-            .body(software.amazon.awssdk.core.SdkBytes.fromUtf8String(jsonBody))
+            .body(SdkBytes.fromUtf8String(jsonBody))
             .build()
 
         val responseText: String = try {
@@ -236,7 +243,7 @@ class JsonToSheetController(
         }
 
         return workbook.use {
-            val bos = java.io.ByteArrayOutputStream()
+            val bos = ByteArrayOutputStream()
             it.write(bos)
             bos.toByteArray()
         }

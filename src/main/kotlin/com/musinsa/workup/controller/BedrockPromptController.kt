@@ -1,6 +1,6 @@
-package com.musinsa.automation.controller
+package com.musinsa.workup.controller
 
-import com.musinsa.automation.service.BedrockPromptService
+import com.musinsa.workup.service.BedrockPromptService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 

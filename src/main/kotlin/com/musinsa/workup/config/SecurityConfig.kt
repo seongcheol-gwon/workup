@@ -1,4 +1,4 @@
-package com.musinsa.automation.config
+package com.musinsa.workup.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

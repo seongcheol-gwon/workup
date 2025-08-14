@@ -1,6 +1,6 @@
-package com.musinsa.automation.controller
+package com.musinsa.workup.controller
 
-import com.musinsa.automation.service.BedrockDiagnosticsService
+import com.musinsa.workup.service.BedrockDiagnosticsService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping

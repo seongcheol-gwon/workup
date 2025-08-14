@@ -1,4 +1,4 @@
-package com.musinsa.automation.model
+package com.musinsa.workup.model
 
 import jakarta.persistence.*
 import java.time.LocalDateTime

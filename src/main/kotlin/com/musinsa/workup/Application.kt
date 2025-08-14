@@ -1,14 +1,14 @@
-package com.musinsa.automation
+package com.musinsa.workup
 
-import com.musinsa.automation.config.BedrockProperties
+import com.musinsa.workup.config.BedrockProperties
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
 @EnableConfigurationProperties(BedrockProperties::class)
-class AutomationApplication
+class Application
 
 fun main(args: Array<String>) {
-    runApplication<AutomationApplication>(*args)
+    runApplication<Application>(*args)
 }

@@ -1,6 +1,7 @@
-package com.musinsa.automation.service
+package com.musinsa.workup.service
 
-import com.musinsa.automation.config.BedrockProperties
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.musinsa.workup.config.BedrockProperties
 import org.springframework.stereotype.Service
 import software.amazon.awssdk.auth.credentials.AwsCredentials
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
@@ -67,7 +68,7 @@ class BedrockDiagnosticsService(
                         )
                     )
                 )
-                val payload = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().writeValueAsString(payloadMap)
+                val payload = jacksonObjectMapper().writeValueAsString(payloadMap)
                 val req = InvokeModelRequest.builder()
                     .modelId(modelId)
                     .contentType("application/json")

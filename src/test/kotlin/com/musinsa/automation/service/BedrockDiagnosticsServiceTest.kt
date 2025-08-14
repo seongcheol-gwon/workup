@@ -1,6 +1,7 @@
 package com.musinsa.automation.service
 
-import com.musinsa.automation.config.BedrockProperties
+import com.musinsa.workup.config.BedrockProperties
+import com.musinsa.workup.service.BedrockDiagnosticsService
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import software.amazon.awssdk.auth.credentials.AwsCredentials

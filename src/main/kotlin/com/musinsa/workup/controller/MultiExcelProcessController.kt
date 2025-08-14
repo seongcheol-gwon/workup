@@ -1,7 +1,10 @@
-package com.musinsa.automation.controller
+package com.musinsa.workup.controller
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.musinsa.automation.service.MultiExcelProcessingService
+import com.musinsa.workup.service.MultiExcelProcessingService
+import org.apache.poi.EncryptedDocumentException
+import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -88,14 +91,14 @@ class MultiExcelProcessController(
             val workbook = try {
                 if (password.isNullOrBlank()) {
                     try {
-                        org.apache.poi.ss.usermodel.WorkbookFactory.create(file.inputStream)
-                    } catch (e: org.apache.poi.EncryptedDocumentException) {
+                        WorkbookFactory.create(file.inputStream)
+                    } catch (e: EncryptedDocumentException) {
                         return ResponseEntity.ok(mapOf("sheets" to emptyList<String>(), "needsPassword" to true))
                     }
                 } else {
-                    org.apache.poi.ss.usermodel.WorkbookFactory.create(file.inputStream, password)
+                    WorkbookFactory.create(file.inputStream, password)
                 }
-            } catch (e: org.apache.poi.EncryptedDocumentException) {
+            } catch (e: EncryptedDocumentException) {
                 return ResponseEntity.badRequest().body(mapOf("error" to "PASSWORD_REQUIRED_OR_INVALID"))
             } catch (e: Exception) {
                 return ResponseEntity.status(400).body(mapOf("error" to "FAILED_TO_OPEN", "message" to (e.message ?: "")))
@@ -125,14 +128,14 @@ class MultiExcelProcessController(
             val workbook = try {
                 if (password.isNullOrBlank()) {
                     try {
-                        org.apache.poi.ss.usermodel.WorkbookFactory.create(file.inputStream)
-                    } catch (e: org.apache.poi.EncryptedDocumentException) {
+                        WorkbookFactory.create(file.inputStream)
+                    } catch (e: EncryptedDocumentException) {
                         return ResponseEntity.ok(mapOf("sheets" to emptyList<String>(), "columnsBySheet" to emptyMap<String, List<String>>(), "needsPassword" to true))
                     }
                 } else {
-                    org.apache.poi.ss.usermodel.WorkbookFactory.create(file.inputStream, password)
+                    WorkbookFactory.create(file.inputStream, password)
                 }
-            } catch (e: org.apache.poi.EncryptedDocumentException) {
+            } catch (e: EncryptedDocumentException) {
                 return ResponseEntity.badRequest().body(mapOf("error" to "PASSWORD_REQUIRED_OR_INVALID"))
             } catch (e: Exception) {
                 return ResponseEntity.status(400).body(mapOf("error" to "FAILED_TO_OPEN", "message" to (e.message ?: "")))
@@ -152,10 +155,10 @@ class MultiExcelProcessController(
                         for (c in 0 until lastCell) {
                             val cell = headerRow.getCell(c)
                             val value = when (cell?.cellType) {
-                                org.apache.poi.ss.usermodel.CellType.STRING -> cell.stringCellValue
-                                org.apache.poi.ss.usermodel.CellType.NUMERIC -> cell.numericCellValue.toString()
-                                org.apache.poi.ss.usermodel.CellType.BOOLEAN -> cell.booleanCellValue.toString()
-                                org.apache.poi.ss.usermodel.CellType.FORMULA -> cell.toString()
+                                CellType.STRING -> cell.stringCellValue
+                                CellType.NUMERIC -> cell.numericCellValue.toString()
+                                CellType.BOOLEAN -> cell.booleanCellValue.toString()
+                                CellType.FORMULA -> cell.toString()
                                 else -> cell?.toString() ?: ""
                             }
                             val trimmed = value.trim()

@@ -1,6 +1,6 @@
-package com.musinsa.automation.repository
+package com.musinsa.workup.repository
 
-import com.musinsa.automation.model.PromptRecord
+import com.musinsa.workup.model.PromptRecord
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 

@@ -1,6 +1,7 @@
 package com.musinsa.automation.service
 
-import com.musinsa.automation.config.BedrockProperties
+import com.musinsa.workup.config.BedrockProperties
+import com.musinsa.workup.service.MultiExcelProcessingService
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.text.Normalizer

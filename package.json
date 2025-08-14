@@ -1,5 +1,5 @@
 {
-  "name": "automation-monorepo",
+  "name": "workup-monorepo",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -8,9 +8,6 @@
     "preweb:start": "npm --prefix web install --no-audit --no-fund",
     "web:dev": "npm --prefix web run dev",
     "web:build": "npm --prefix web run build",
-    "web:start": "npm --prefix web run start",
-    "dev": "npm run web:dev",
-    "build": "npm run web:build",
-    "start": "npm run web:start"
+    "web:start": "npm --prefix web run start"
   }
 }

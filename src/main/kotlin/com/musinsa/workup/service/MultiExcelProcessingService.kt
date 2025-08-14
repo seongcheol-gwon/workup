@@ -1,15 +1,25 @@
-package com.musinsa.automation.service
+package com.musinsa.workup.service
 
-import com.musinsa.automation.service.BedrockPromptService
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.musinsa.workup.config.BedrockProperties
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+import software.amazon.awssdk.core.SdkBytes
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient
+import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest
+import java.net.URLDecoder
+import java.text.Normalizer
+import kotlin.collections.iterator
+import kotlin.math.min
 
 @Service
 class MultiExcelProcessingService(
-    private val props: com.musinsa.automation.config.BedrockProperties
+    private val props: BedrockProperties
 ) {
     data class RowResult(
         val fileName: String,
@@ -74,7 +84,7 @@ class MultiExcelProcessingService(
         // 2) Percent-decoding if it looks URL-encoded
         if (candidate.contains('%')) {
             try {
-                val decoded = java.net.URLDecoder.decode(candidate, Charsets.UTF_8.name())
+                val decoded = URLDecoder.decode(candidate, Charsets.UTF_8.name())
                 if (decoded.isNotBlank()) candidate = decoded
             } catch (_: Exception) { /* ignore */ }
         }
@@ -91,7 +101,7 @@ class MultiExcelProcessingService(
 
         // 4) Normalize Unicode to NFC so that visually identical Hangul compares equal
         return try {
-            java.text.Normalizer.normalize(candidate, java.text.Normalizer.Form.NFC)
+            Normalizer.normalize(candidate, Normalizer.Form.NFC)
         } catch (_: Exception) {
             candidate
         }
@@ -126,19 +136,19 @@ class MultiExcelProcessingService(
         )
         if (!system.isNullOrBlank()) body["system"] = system
 
-        val mapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper()
+        val mapper = jacksonObjectMapper()
         val jsonBody = mapper.writeValueAsString(body)
 
-        val client = software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient.builder()
-            .region(software.amazon.awssdk.regions.Region.of(props.region))
-            .credentialsProvider(software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider.create())
+        val client = BedrockRuntimeClient.builder()
+            .region(Region.of(props.region))
+            .credentialsProvider(DefaultCredentialsProvider.create())
             .build()
 
-        val request = software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest.builder()
+        val request = InvokeModelRequest.builder()
             .modelId(props.modelId)
             .contentType("application/json")
             .accept("application/json")
-            .body(software.amazon.awssdk.core.SdkBytes.fromUtf8String(jsonBody))
+            .body(SdkBytes.fromUtf8String(jsonBody))
             .build()
 
         val responseText: String = try {
@@ -209,10 +219,10 @@ class MultiExcelProcessingService(
                             .append("Sheet: ").append(sName).append('\n')
                             .append("Data (TSV):\n")
 
-                        val lastRow = kotlin.math.min(sheet.lastRowNum, maxRowsPerSheet - 1)
+                        val lastRow = min(sheet.lastRowNum, maxRowsPerSheet - 1)
                         for (r in 0..lastRow) {
                             val row = sheet.getRow(r) ?: continue
-                            val lastCell = kotlin.math.min((row.lastCellNum.toInt() - 1).coerceAtLeast(0), maxColsPerRow - 1)
+                            val lastCell = min((row.lastCellNum.toInt() - 1).coerceAtLeast(0), maxColsPerRow - 1)
                             val cells = mutableListOf<String>()
                             for (c in 0..lastCell) {
                                 val cell = row.getCell(c)

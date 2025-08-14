@@ -3,7 +3,6 @@ plugins {
     kotlin("plugin.spring") version "1.9.25"
     id("org.springframework.boot") version "3.5.5-SNAPSHOT"
     id("io.spring.dependency-management") version "1.1.7"
-    id("com.netflix.dgs.codegen") version "7.0.3"
     kotlin("plugin.jpa") version "1.9.25"
 }
 
@@ -61,11 +60,6 @@ kotlin {
     }
 }
 
-tasks.generateJava {
-    schemaPaths.add("${projectDir}/src/main/resources/graphql-client")
-    packageName = "com.musinsa.automation.codegen"
-    generateClient = true
-}
 
 allOpen {
     annotation("jakarta.persistence.Entity")
