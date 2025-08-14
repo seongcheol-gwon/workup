@@ -11,55 +11,6 @@ For further reference, please consider the following sections:
 * [Spring Data JPA](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/reference/data/sql.html#data.sql.jpa-and-spring-data)
 * [Spring for GraphQL](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/reference/web/spring-graphql.html)
 * [Spring Security](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/reference/web/spring-security.html)
-* [Amazon Bedrock](https://docs.spring.io/spring-ai/reference/api/bedrock-chat.html)
-* [Spring Web](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/reference/web/servlet.html)
-
-### Guides
-
-The following guides illustrate how to use some features concretely:
-
-* [Accessing Data with JPA](https://spring.io/guides/gs/accessing-data-jpa/)
-* [Building a GraphQL service](https://spring.io/guides/gs/graphql-server/)
-* [Securing a Web Application](https://spring.io/guides/gs/securing-web/)
-* [Spring Boot and OAuth2](https://spring.io/guides/tutorials/spring-boot-oauth2/)
-* [Authenticating a User with LDAP](https://spring.io/guides/gs/authenticating-ldap/)
-* [Building a RESTful Web Service](https://spring.io/guides/gs/rest-service/)
-* [Serving Web Content with Spring MVC](https://spring.io/guides/gs/serving-web-content/)
-* [Building REST services with Spring](https://spring.io/guides/tutorials/rest/)
-
-### Additional Links
-
-These additional references should also help you:
-
-* [Gradle Build Scans – insights for your project's build](https://scans.gradle.com#gradle)
-
-## GraphQL code generation with DGS
-
-This project has been configured to use the Netflix DGS Codegen plugin.
-This plugin can be used to generate client files for accessing remote GraphQL services.
-The default setup assumes that the GraphQL schema file for the remote service is added to the
-`src/main/resources/graphql-client/` location.
-
-You can learn more about
-the [plugin configuration options](https://netflix.github.io/dgs/generating-code-from-schema/#configuring-code-generation)
-and
-[how to use the generated types](https://netflix.github.io/dgs/generating-code-from-schema/) to adapt the default setup.
-
-
-
-# Getting Started
-
-### Reference Documentation
-
-For further reference, please consider the following sections:
-
-* [Official Gradle documentation](https://docs.gradle.org)
-* [Spring Boot Gradle Plugin Reference Guide](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/gradle-plugin)
-* [Create an OCI image](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/gradle-plugin/packaging-oci-image.html)
-* [Spring Configuration Processor](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/specification/configuration-metadata/annotation-processor.html)
-* [Spring Data JPA](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/reference/data/sql.html#data.sql.jpa-and-spring-data)
-* [Spring for GraphQL](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/reference/web/spring-graphql.html)
-* [Spring Security](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/reference/web/spring-security.html)
 * [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/what-is-bedrock.html)
 * [Spring Web](https://docs.spring.io/spring-boot/3.5.5-SNAPSHOT/reference/web/servlet.html)
 
